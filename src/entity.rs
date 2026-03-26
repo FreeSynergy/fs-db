@@ -1,10 +1,10 @@
-// Base entity traits for FreeSynergy database models.
+// Base entity traits for `FreeSynergy` database models.
 
 // ── FsEntity ─────────────────────────────────────────────────────────────────
 
-/// Marker trait for all FreeSynergy database entities.
+/// Marker trait for all `FreeSynergy` database entities.
 ///
-/// Combine with SeaORM's `EntityTrait` when defining concrete entity types.
+/// Combine with `SeaORM`'s `EntityTrait` when defining concrete entity types.
 /// The `entity_name()` method is used in logs and error messages.
 pub trait FsEntity {
     /// Human-readable name for this entity type (e.g. `"host"`, `"module"`).

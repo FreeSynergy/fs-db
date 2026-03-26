@@ -1,4 +1,4 @@
-/// SeaORM entity for the `modules` table.
+/// `SeaORM` entity for the `modules` table.
 ///
 /// A module represents a deployed service instance (e.g. a proxy, mail server, or wiki)
 /// running on a specific host within a project.

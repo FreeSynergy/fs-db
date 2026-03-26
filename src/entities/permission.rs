@@ -1,4 +1,4 @@
-/// SeaORM entity for the `permissions` table.
+/// `SeaORM` entity for the `permissions` table.
 ///
 /// RBAC permission grants: which subject may perform which action on which resource.
 use sea_orm::entity::prelude::*;

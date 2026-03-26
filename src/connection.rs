@@ -1,4 +1,4 @@
-// Database connection management via SeaORM.
+// Database connection management via `SeaORM`.
 
 use sea_orm::{ConnectOptions, ConnectionTrait, Database, DatabaseConnection};
 
@@ -9,17 +9,18 @@ use fs_error::FsError;
 /// Database backend selection.
 #[derive(Debug, Clone)]
 pub enum DbBackend {
-    /// SQLite file database.
+    /// `SQLite` file database.
     Sqlite { path: String },
-    /// In-memory SQLite (for tests).
+    /// In-memory `SQLite` (for tests).
     SqliteMemory,
-    /// PostgreSQL.
+    /// `PostgreSQL`.
     #[cfg(feature = "postgres")]
     Postgres { url: String },
 }
 
 impl DbBackend {
-    /// Build the SeaORM connection URL.
+    /// Build the `SeaORM` connection URL.
+    #[must_use]
     pub fn url(&self) -> String {
         match self {
             DbBackend::Sqlite { path } => format!("sqlite://{path}?mode=rwc"),
@@ -32,7 +33,7 @@ impl DbBackend {
 
 // ── DbConnection ──────────────────────────────────────────────────────────────
 
-/// SeaORM database connection wrapper.
+/// `SeaORM` database connection wrapper.
 pub struct DbConnection {
     conn: DatabaseConnection,
     backend: DbBackend,
@@ -40,6 +41,10 @@ pub struct DbConnection {
 
 impl DbConnection {
     /// Connect to the given backend with default options.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`FsError`] if the database connection fails.
     pub async fn connect(backend: DbBackend) -> Result<Self, FsError> {
         let conn = Database::connect(backend.url())
             .await
@@ -48,6 +53,10 @@ impl DbConnection {
     }
 
     /// Connect with custom [`ConnectOptions`] (pool size, timeouts, etc.)
+    ///
+    /// # Errors
+    ///
+    /// Returns [`FsError`] if the database connection fails.
     pub async fn connect_with_options(
         backend: DbBackend,
         mut opts: ConnectOptions,
@@ -59,12 +68,14 @@ impl DbConnection {
         Ok(Self { conn, backend })
     }
 
-    /// Access the underlying SeaORM [`DatabaseConnection`].
+    /// Access the underlying `SeaORM` [`DatabaseConnection`].
+    #[must_use]
     pub fn inner(&self) -> &DatabaseConnection {
         &self.conn
     }
 
     /// The backend this connection was opened against.
+    #[must_use]
     pub fn backend(&self) -> &DbBackend {
         &self.backend
     }
@@ -72,6 +83,10 @@ impl DbConnection {
     /// Execute all statements in a schema string, creating tables if they don't exist.
     ///
     /// Safe to call every startup — designed for idempotent `CREATE TABLE IF NOT EXISTS` schemas.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`FsError`] if any statement fails.
     pub async fn apply_schema(&self, schema: &str) -> Result<(), FsError> {
         for stmt in schema.split(';').map(str::trim).filter(|s| !s.is_empty()) {
             self.conn
@@ -83,6 +98,10 @@ impl DbConnection {
     }
 
     /// Close the connection pool.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`FsError`] if the connection cannot be closed cleanly.
     pub async fn close(self) -> Result<(), FsError> {
         self.conn
             .close()

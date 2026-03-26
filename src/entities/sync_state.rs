@@ -1,4 +1,4 @@
-/// SeaORM entity for the `sync_states` table.
+/// `SeaORM` entity for the `sync_states` table.
 ///
 /// Stores per-resource CRDT vector-clock state for offline-first synchronisation.
 use sea_orm::entity::prelude::*;

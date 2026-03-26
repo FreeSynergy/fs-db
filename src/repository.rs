@@ -1,4 +1,4 @@
-/// CRUD repositories for FreeSynergy database entities.
+/// CRUD repositories for `FreeSynergy` database entities.
 ///
 /// Each repository wraps a reference to a [`sea_orm::DatabaseConnection`] and
 /// provides typed async methods for the corresponding table.
@@ -40,7 +40,7 @@ fn unix_now() -> i64 {
 /// ```
 #[allow(async_fn_in_trait)]
 pub trait CrudRepo {
-    /// The SeaORM model type this repository operates on.
+    /// The `SeaORM` model type this repository operates on.
     type Model: Send;
 
     /// Find a record by its primary key. Returns `None` if not found.
@@ -67,6 +67,7 @@ pub enum HostStatus {
 }
 
 impl HostStatus {
+    #[must_use]
     pub fn as_str(self) -> &'static str {
         match self {
             Self::Unknown => "unknown",
@@ -100,6 +101,7 @@ pub enum ModuleStatus {
 }
 
 impl ModuleStatus {
+    #[must_use]
     pub fn as_str(self) -> &'static str {
         match self {
             Self::Stopped => "stopped",
@@ -130,6 +132,7 @@ pub enum ProjectStatus {
 }
 
 impl ProjectStatus {
+    #[must_use]
     pub fn as_str(self) -> &'static str {
         match self {
             Self::Draft => "draft",
@@ -154,11 +157,16 @@ pub struct ResourceRepo<'a> {
 
 impl<'a> ResourceRepo<'a> {
     /// Create a new repository backed by `conn`.
+    #[must_use]
     pub fn new(conn: &'a DatabaseConnection) -> Self {
         Self { conn }
     }
 
     /// Insert a new resource. Returns the model with its generated `id`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`FsError`] on database failure.
     pub async fn insert(
         &self,
         kind: impl Into<String>,
@@ -185,6 +193,10 @@ impl<'a> ResourceRepo<'a> {
     }
 
     /// Find a resource by its primary key.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`FsError`] on database failure.
     pub async fn find_by_id(&self, id: i64) -> Result<Option<resource::Model>, FsError> {
         resource::Entity::find_by_id(id)
             .one(self.conn)
@@ -193,6 +205,10 @@ impl<'a> ResourceRepo<'a> {
     }
 
     /// Delete a resource by its primary key.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`FsError`] on database failure.
     pub async fn delete_by_id(&self, id: i64) -> Result<(), FsError> {
         resource::Entity::delete_by_id(id)
             .exec(self.conn)
@@ -202,6 +218,10 @@ impl<'a> ResourceRepo<'a> {
     }
 
     /// List all resources of a given kind.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`FsError`] on database failure.
     pub async fn find_by_kind(&self, kind: &str) -> Result<Vec<resource::Model>, FsError> {
         resource::Entity::find()
             .filter(resource::Column::Kind.eq(kind))
@@ -211,6 +231,10 @@ impl<'a> ResourceRepo<'a> {
     }
 
     /// List all resources.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`FsError`] on database failure.
     pub async fn find_all(&self) -> Result<Vec<resource::Model>, FsError> {
         resource::Entity::find()
             .all(self.conn)
@@ -219,6 +243,10 @@ impl<'a> ResourceRepo<'a> {
     }
 
     /// Update the `name` and `meta` of an existing resource.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`FsError`] on database failure.
     pub async fn update(
         &self,
         id: i64,
@@ -267,11 +295,16 @@ pub struct PermissionRepo<'a> {
 
 impl<'a> PermissionRepo<'a> {
     /// Create a new permission repository.
+    #[must_use]
     pub fn new(conn: &'a DatabaseConnection) -> Self {
         Self { conn }
     }
 
     /// Grant a permission to a subject for an action, optionally scoped to a resource.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`FsError`] on database failure.
     pub async fn grant(
         &self,
         subject: impl Into<String>,
@@ -294,6 +327,10 @@ impl<'a> PermissionRepo<'a> {
     }
 
     /// List all non-expired permissions for a subject.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`FsError`] on database failure.
     pub async fn find_for_subject(&self, subject: &str) -> Result<Vec<permission::Model>, FsError> {
         let now = unix_now();
         permission::Entity::find()
@@ -309,6 +346,10 @@ impl<'a> PermissionRepo<'a> {
     }
 
     /// Revoke a specific permission by its primary key.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`FsError`] on database failure.
     pub async fn revoke(&self, id: i64) -> Result<(), FsError> {
         permission::Entity::delete_by_id(id)
             .exec(self.conn)
@@ -342,11 +383,16 @@ pub struct AuditRepo<'a> {
 
 impl<'a> AuditRepo<'a> {
     /// Create a new audit repository.
+    #[must_use]
     pub fn new(conn: &'a DatabaseConnection) -> Self {
         Self { conn }
     }
 
     /// Append an audit log entry. Returns the inserted row.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`FsError`] on database failure.
     #[allow(clippy::too_many_arguments)]
     pub async fn log(
         &self,
@@ -376,6 +422,10 @@ impl<'a> AuditRepo<'a> {
     }
 
     /// Return the most recent `limit` audit log entries (newest first).
+    ///
+    /// # Errors
+    ///
+    /// Returns [`FsError`] on database failure.
     pub async fn recent(&self, limit: u64) -> Result<Vec<audit_log::Model>, FsError> {
         audit_log::Entity::find()
             .order_by(audit_log::Column::CreatedAt, Order::Desc)
@@ -386,6 +436,10 @@ impl<'a> AuditRepo<'a> {
     }
 
     /// Return all audit entries for a specific resource.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`FsError`] on database failure.
     pub async fn find_for_resource(
         &self,
         resource_id: i64,
@@ -427,11 +481,16 @@ pub struct PluginRepo<'a> {
 
 impl<'a> PluginRepo<'a> {
     /// Create a new plugin repository.
+    #[must_use]
     pub fn new(conn: &'a DatabaseConnection) -> Self {
         Self { conn }
     }
 
     /// Register a new plugin or update its version/path if it already exists.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`FsError`] on database failure.
     pub async fn upsert(
         &self,
         name: impl Into<String>,
@@ -482,6 +541,10 @@ impl<'a> PluginRepo<'a> {
     }
 
     /// List all enabled plugins.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`FsError`] on database failure.
     pub async fn find_enabled(&self) -> Result<Vec<plugin::Model>, FsError> {
         plugin::Entity::find()
             .filter(plugin::Column::Enabled.eq(true))
@@ -491,6 +554,10 @@ impl<'a> PluginRepo<'a> {
     }
 
     /// Find a plugin by name.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`FsError`] on database failure.
     pub async fn find_by_name(&self, name: &str) -> Result<Option<plugin::Model>, FsError> {
         plugin::Entity::find()
             .filter(plugin::Column::Name.eq(name))
@@ -500,6 +567,10 @@ impl<'a> PluginRepo<'a> {
     }
 
     /// Enable or disable a plugin by its primary key.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`FsError`] on database failure.
     pub async fn set_enabled(&self, id: i64, enabled: bool) -> Result<(), FsError> {
         let active = plugin::ActiveModel {
             id: Set(id),
@@ -542,11 +613,16 @@ pub struct HostRepo<'a> {
 
 impl<'a> HostRepo<'a> {
     /// Create a new host repository backed by `conn`.
+    #[must_use]
     pub fn new(conn: &'a DatabaseConnection) -> Self {
         Self { conn }
     }
 
     /// Insert a new host record. Returns the inserted model with its generated `id`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`FsError`] on database failure.
     pub async fn insert(
         &self,
         name: impl Into<String>,
@@ -577,6 +653,10 @@ impl<'a> HostRepo<'a> {
     }
 
     /// Find a host by its primary key.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`FsError`] on database failure.
     pub async fn find_by_id(&self, id: i64) -> Result<Option<host::Model>, FsError> {
         host::Entity::find_by_id(id)
             .one(self.conn)
@@ -585,6 +665,10 @@ impl<'a> HostRepo<'a> {
     }
 
     /// Delete a host by its primary key.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`FsError`] on database failure.
     pub async fn delete_by_id(&self, id: i64) -> Result<(), FsError> {
         host::Entity::delete_by_id(id)
             .exec(self.conn)
@@ -594,6 +678,10 @@ impl<'a> HostRepo<'a> {
     }
 
     /// List all hosts.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`FsError`] on database failure.
     pub async fn find_all(&self) -> Result<Vec<host::Model>, FsError> {
         host::Entity::find()
             .all(self.conn)
@@ -602,6 +690,10 @@ impl<'a> HostRepo<'a> {
     }
 
     /// Update the operational status of a host.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`FsError`] on database failure.
     pub async fn update_status(&self, id: i64, status: HostStatus) -> Result<(), FsError> {
         let active = host::ActiveModel {
             id: Set(id),
@@ -645,11 +737,16 @@ pub struct ProjectRepo<'a> {
 
 impl<'a> ProjectRepo<'a> {
     /// Create a new project repository backed by `conn`.
+    #[must_use]
     pub fn new(conn: &'a DatabaseConnection) -> Self {
         Self { conn }
     }
 
     /// Insert a new project. Returns the inserted model with its generated `id`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`FsError`] on database failure.
     pub async fn insert(
         &self,
         name: impl Into<String>,
@@ -673,6 +770,10 @@ impl<'a> ProjectRepo<'a> {
     }
 
     /// List all projects.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`FsError`] on database failure.
     pub async fn find_all(&self) -> Result<Vec<project::Model>, FsError> {
         project::Entity::find()
             .all(self.conn)
@@ -681,6 +782,10 @@ impl<'a> ProjectRepo<'a> {
     }
 
     /// Update a project's name, domain, description, and status.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`FsError`] on database failure.
     pub async fn update(
         &self,
         id: i64,
@@ -733,11 +838,16 @@ pub struct ModuleRepo<'a> {
 
 impl<'a> ModuleRepo<'a> {
     /// Create a new module repository backed by `conn`.
+    #[must_use]
     pub fn new(conn: &'a DatabaseConnection) -> Self {
         Self { conn }
     }
 
     /// Insert a new module instance. Returns the inserted model with its generated `id`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`FsError`] on database failure.
     pub async fn insert(
         &self,
         name: impl Into<String>,
@@ -767,6 +877,10 @@ impl<'a> ModuleRepo<'a> {
     }
 
     /// List all modules running on a specific host.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`FsError`] on database failure.
     pub async fn find_by_host(&self, host_id: i64) -> Result<Vec<module::Model>, FsError> {
         module::Entity::find()
             .filter(module::Column::HostId.eq(host_id))
@@ -776,6 +890,10 @@ impl<'a> ModuleRepo<'a> {
     }
 
     /// List all modules belonging to a specific project.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`FsError`] on database failure.
     pub async fn find_by_project(&self, project_id: i64) -> Result<Vec<module::Model>, FsError> {
         module::Entity::find()
             .filter(module::Column::ProjectId.eq(project_id))
@@ -785,6 +903,10 @@ impl<'a> ModuleRepo<'a> {
     }
 
     /// Update the operational status of a module.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`FsError`] on database failure.
     pub async fn update_status(&self, id: i64, status: ModuleStatus) -> Result<(), FsError> {
         let active = module::ActiveModel {
             id: Set(id),
@@ -831,6 +953,7 @@ pub struct InstalledPackageRepo<'a> {
 
 impl<'a> InstalledPackageRepo<'a> {
     /// Create a new repository backed by `conn`.
+    #[must_use]
     pub fn new(conn: &'a DatabaseConnection) -> Self {
         Self { conn }
     }
@@ -839,6 +962,10 @@ impl<'a> InstalledPackageRepo<'a> {
     ///
     /// The new record is always inserted as `active = true`. Call
     /// [`set_active`](Self::set_active) on any previous version to deactivate it.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`FsError`] on database failure.
     pub async fn insert(
         &self,
         package_id: impl Into<String>,
@@ -869,6 +996,10 @@ impl<'a> InstalledPackageRepo<'a> {
     }
 
     /// Find the currently active version for `package_id`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`FsError`] on database failure.
     pub async fn find_active(
         &self,
         package_id: &str,
@@ -882,6 +1013,10 @@ impl<'a> InstalledPackageRepo<'a> {
     }
 
     /// List every installed package record across all versions.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`FsError`] on database failure.
     pub async fn list_all(&self) -> Result<Vec<installed_package::Model>, FsError> {
         installed_package::Entity::find()
             .all(self.conn)
@@ -890,6 +1025,10 @@ impl<'a> InstalledPackageRepo<'a> {
     }
 
     /// Set the `active` flag for a specific record by `id`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`FsError`] on database failure.
     pub async fn set_active(&self, id: i64, active: bool) -> Result<(), FsError> {
         let model = installed_package::ActiveModel {
             id: Set(id),
@@ -933,6 +1072,7 @@ pub struct ServiceRegistryRepo<'a> {
 
 impl<'a> ServiceRegistryRepo<'a> {
     /// Create a new service registry repository backed by `conn`.
+    #[must_use]
     pub fn new(conn: &'a DatabaseConnection) -> Self {
         Self { conn }
     }
@@ -941,6 +1081,10 @@ impl<'a> ServiceRegistryRepo<'a> {
     ///
     /// If a row for `module_id` already exists it is updated; otherwise a new
     /// row is inserted.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`FsError`] on database failure.
     pub async fn upsert(
         &self,
         module_id: i64,
@@ -984,6 +1128,10 @@ impl<'a> ServiceRegistryRepo<'a> {
     }
 
     /// Find the registry entry for a specific module.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`FsError`] on database failure.
     pub async fn find_by_module(
         &self,
         module_id: i64,
@@ -998,6 +1146,10 @@ impl<'a> ServiceRegistryRepo<'a> {
     /// List all registry entries whose `capabilities` JSON contains `capability`.
     ///
     /// Uses a SQL `LIKE` search — suitable for simple string matching.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`FsError`] on database failure.
     pub async fn find_by_capability(
         &self,
         capability: &str,
@@ -1010,6 +1162,10 @@ impl<'a> ServiceRegistryRepo<'a> {
     }
 
     /// Mark a registry entry as healthy or unhealthy, updating `last_check`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`FsError`] on database failure.
     pub async fn set_healthy(&self, id: i64, healthy: bool) -> Result<(), FsError> {
         let active = service_registry::ActiveModel {
             id: Set(id),

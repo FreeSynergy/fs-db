@@ -1,4 +1,4 @@
-/// SeaORM entity for the `installed_packages` table.
+/// `SeaORM` entity for the `installed_packages` table.
 ///
 /// Tracks every installed package with its version, channel, and install state.
 use sea_orm::entity::prelude::*;

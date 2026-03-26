@@ -1,6 +1,6 @@
-/// SeaORM entity for the `hosts` table.
+/// `SeaORM` entity for the `hosts` table.
 ///
-/// A host represents a physical or virtual machine managed by FreeSynergy.
+/// A host represents a physical or virtual machine managed by `FreeSynergy`.
 use sea_orm::entity::prelude::*;
 
 /// Host database model.

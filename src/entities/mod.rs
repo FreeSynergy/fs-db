@@ -5,7 +5,7 @@ pub mod module;
 pub mod permission;
 pub mod plugin;
 pub mod project;
-/// SeaORM entity definitions for the FreeSynergy core schema.
+/// `SeaORM` entity definitions for the `FreeSynergy` core schema.
 ///
 /// # Entities
 /// | module               | table name           | description                                  |

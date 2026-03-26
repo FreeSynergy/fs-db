@@ -1,6 +1,6 @@
 /// High-level database manager: opens connection, runs migrations, exposes repositories.
 ///
-/// `DbManager` is the primary entry point for FreeSynergy applications that need
+/// `DbManager` is the primary entry point for `FreeSynergy` applications that need
 /// persistent storage. It handles connection setup, schema migration, and provides
 /// typed repository accessors for every core table.
 ///
@@ -29,7 +29,11 @@ pub struct DbManager {
 }
 
 impl DbManager {
-    /// Open (or create) a SQLite database at `path`, running all pending migrations.
+    /// Open (or create) a `SQLite` database at `path`, running all pending migrations.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`FsError`] if the path is invalid, the connection fails, or migrations fail.
     pub async fn open_sqlite(path: impl AsRef<Path>) -> Result<Self, FsError> {
         let path_str = path
             .as_ref()
@@ -41,20 +45,29 @@ impl DbManager {
         Ok(Self { conn })
     }
 
-    /// Open an in-memory SQLite database. Primarily for tests.
+    /// Open an in-memory `SQLite` database. Primarily for tests.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`FsError`] if the connection fails or migrations fail.
     pub async fn open_memory() -> Result<Self, FsError> {
         let conn = DbConnection::connect(DbBackend::SqliteMemory).await?;
         Migrator::run(conn.inner()).await?;
         Ok(Self { conn })
     }
 
-    /// Default FSN SQLite path: `~/.local/share/fsn/fsn.db`.
+    /// Default `SQLite` path: `~/.local/share/fsn/fsn.db`.
+    #[must_use]
     pub fn default_path() -> String {
         let home = std::env::var("HOME").unwrap_or_else(|_| ".".into());
         format!("{home}/.local/share/fsn/fsn.db")
     }
 
-    /// Open the default FSN SQLite database, creating parent directories as needed.
+    /// Open the default `SQLite` database, creating parent directories as needed.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`FsError`] if the directory cannot be created or the database fails to open.
     pub async fn open_default() -> Result<Self, FsError> {
         let path = Self::default_path();
         let dir = Path::new(&path).parent().unwrap_or(Path::new("."));
@@ -64,56 +77,70 @@ impl DbManager {
     }
 
     /// Repository for the `resources` table.
+    #[must_use]
     pub fn resources(&self) -> ResourceRepo<'_> {
         ResourceRepo::new(self.conn.inner())
     }
 
     /// Repository for the `permissions` table.
+    #[must_use]
     pub fn permissions(&self) -> PermissionRepo<'_> {
         PermissionRepo::new(self.conn.inner())
     }
 
     /// Append-only repository for the `audit_logs` table.
+    #[must_use]
     pub fn audit(&self) -> AuditRepo<'_> {
         AuditRepo::new(self.conn.inner())
     }
 
     /// Repository for the `plugins` table.
+    #[must_use]
     pub fn plugins(&self) -> PluginRepo<'_> {
         PluginRepo::new(self.conn.inner())
     }
 
     /// Repository for the `hosts` table.
+    #[must_use]
     pub fn hosts(&self) -> HostRepo<'_> {
         HostRepo::new(self.conn.inner())
     }
 
     /// Repository for the `projects` table.
+    #[must_use]
     pub fn projects(&self) -> ProjectRepo<'_> {
         ProjectRepo::new(self.conn.inner())
     }
 
     /// Repository for the `modules` table.
+    #[must_use]
     pub fn modules(&self) -> ModuleRepo<'_> {
         ModuleRepo::new(self.conn.inner())
     }
 
     /// Repository for the `service_registry` table.
+    #[must_use]
     pub fn service_registry(&self) -> ServiceRegistryRepo<'_> {
         ServiceRegistryRepo::new(self.conn.inner())
     }
 
     /// Repository for the `installed_packages` table.
+    #[must_use]
     pub fn installed_packages(&self) -> InstalledPackageRepo<'_> {
         InstalledPackageRepo::new(self.conn.inner())
     }
 
-    /// Access the underlying [`DbConnection`] for custom SeaORM queries.
+    /// Access the underlying [`DbConnection`] for custom `SeaORM` queries.
+    #[must_use]
     pub fn conn(&self) -> &DbConnection {
         &self.conn
     }
 
     /// Close the database connection pool.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`FsError`] if the connection cannot be closed cleanly.
     pub async fn close(self) -> Result<(), FsError> {
         self.conn.close().await
     }

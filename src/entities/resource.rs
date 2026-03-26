@@ -1,6 +1,6 @@
-/// SeaORM entity for the `resources` table.
+/// `SeaORM` entity for the `resources` table.
 ///
-/// A resource represents any managed object within FreeSynergy:
+/// A resource represents any managed object within `FreeSynergy`:
 /// a host, a service instance, a project, etc.
 use sea_orm::entity::prelude::*;
 

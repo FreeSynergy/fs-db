@@ -1,17 +1,12 @@
-#![deny(clippy::all, clippy::pedantic)]
-#![deny(warnings)]
-// Doc-style pedantic lints — addressed in Phase E cleanup.
-#![allow(clippy::missing_errors_doc)]
-#![allow(clippy::must_use_candidate)]
-#![allow(clippy::doc_markdown)]
-//! SeaORM-based database abstraction for FreeSynergy.
+#![deny(clippy::all, clippy::pedantic, warnings)]
+//! `SeaORM`-based database abstraction for `FreeSynergy`.
 //!
-//! Provides connection management, base entity traits, concrete SeaORM entities,
+//! Provides connection management, base entity traits, concrete `SeaORM` entities,
 //! embedded SQL migrations, and a write buffer for high-throughput batched writes.
 //!
 //! # Features
-//! - `sqlite` (default) — SQLite via `sqlx-sqlite`
-//! - `postgres` — PostgreSQL via `sqlx-postgres`
+//! - `sqlite` (default) — `SQLite` via `sqlx-sqlite`
+//! - `postgres` — `PostgreSQL` via `sqlx-postgres`
 //!
 //! # Quick start
 //! ```rust,ignore

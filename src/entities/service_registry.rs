@@ -1,4 +1,4 @@
-/// SeaORM entity for the `service_registry` table.
+/// `SeaORM` entity for the `service_registry` table.
 ///
 /// The service registry tracks what capabilities each deployed module exposes
 /// and whether it is currently healthy.

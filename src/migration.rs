@@ -1,4 +1,4 @@
-/// Embedded SQL migration runner for FreeSynergy.
+/// Embedded SQL migration runner for `FreeSynergy`.
 ///
 /// Migrations are SQL files in the `migrations/` directory, bundled into the
 /// binary at compile time. They are applied in filename order and tracked in
@@ -37,6 +37,10 @@ impl Migrator {
     /// Run all pending migrations against `db`.
     ///
     /// Safe to call on every startup — already-applied migrations are skipped.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`FsError`] if a migration fails or the tracking table cannot be created.
     pub async fn run(db: &DatabaseConnection) -> Result<(), FsError> {
         Self::ensure_tracking_table(db).await?;
 

@@ -1,4 +1,4 @@
-/// SeaORM entity for the `audit_logs` table.
+/// `SeaORM` entity for the `audit_logs` table.
 ///
 /// Immutable audit trail for all resource mutations.
 /// Rows are append-only — never updated or deleted.

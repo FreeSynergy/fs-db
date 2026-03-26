@@ -1,6 +1,6 @@
-/// SeaORM entity for the `plugins` table.
+/// `SeaORM` entity for the `plugins` table.
 ///
-/// Registry of loaded FreeSynergy plugins (WASM or native).
+/// Registry of loaded `FreeSynergy` plugins (WASM or native).
 use sea_orm::entity::prelude::*;
 
 /// Plugin database model.

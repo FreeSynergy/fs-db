@@ -26,6 +26,7 @@ pub struct BufferedWrite {
 
 impl BufferedWrite {
     /// Create a new buffered write from a SQL statement and bound values.
+    #[must_use]
     pub fn new(sql: impl Into<String>, values: Vec<serde_json::Value>) -> Self {
         Self {
             sql: sql.into(),
@@ -34,6 +35,7 @@ impl BufferedWrite {
     }
 
     /// Create a parameterless write (no bound values).
+    #[must_use]
     pub fn statement(sql: impl Into<String>) -> Self {
         Self {
             sql: sql.into(),
@@ -42,11 +44,13 @@ impl BufferedWrite {
     }
 
     /// The SQL statement for this write.
+    #[must_use]
     pub fn sql(&self) -> &str {
         &self.sql
     }
 
     /// The bound parameter values for this write.
+    #[must_use]
     pub fn values(&self) -> &[serde_json::Value] {
         &self.values
     }
@@ -86,6 +90,7 @@ pub struct WriteBuffer {
 
 impl WriteBuffer {
     /// Create with explicit flush interval and max batch size.
+    #[must_use]
     pub fn new(conn: DatabaseConnection, flush_interval: Duration, max_batch_size: usize) -> Self {
         Self {
             queue: Mutex::new(Vec::new()),
@@ -97,6 +102,7 @@ impl WriteBuffer {
     }
 
     /// Create with defaults: 100 ms flush interval, 500 max batch size.
+    #[must_use]
     pub fn with_defaults(conn: DatabaseConnection) -> Self {
         Self::new(conn, Duration::from_millis(100), 500)
     }
@@ -104,6 +110,10 @@ impl WriteBuffer {
     /// Enqueue a write. Returns immediately — does not flush.
     ///
     /// If the batch reaches `max_batch_size`, an automatic flush is triggered.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`FsError`] if an automatic flush fails.
     pub async fn enqueue(&self, write: BufferedWrite) -> Result<(), FsError> {
         let mut queue = self.queue.lock().await;
         queue.push(write);
@@ -119,6 +129,10 @@ impl WriteBuffer {
     /// Flush all queued writes in a single transaction.
     ///
     /// Returns immediately with `count = 0` when the queue is empty.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`FsError`] if the transaction or any write fails.
     pub async fn flush(&self) -> Result<FlushResult, FsError> {
         let mut queue = self.queue.lock().await;
         if queue.is_empty() {

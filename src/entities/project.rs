@@ -1,4 +1,4 @@
-/// SeaORM entity for the `projects` table.
+/// `SeaORM` entity for the `projects` table.
 ///
 /// A project groups hosts, modules, and services into a logical deployment unit.
 use sea_orm::entity::prelude::*;
