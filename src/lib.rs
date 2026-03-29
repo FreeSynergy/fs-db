@@ -18,6 +18,7 @@
 //! ```
 
 pub mod connection;
+pub mod engine;
 pub mod entities;
 pub mod entity;
 pub mod manager;
@@ -26,6 +27,7 @@ pub mod repository;
 pub mod write_buffer;
 
 pub use connection::{DbBackend, DbConnection};
+pub use engine::{DbConfig, DbEngine, DbHealth, DbRow, DbRows};
 pub use entity::{Auditable, FsEntity};
 pub use manager::DbManager;
 pub use migration::Migrator;
