@@ -15,9 +15,9 @@ use fs_error::FsError;
 pub struct DbConfig {
     /// Database URL.
     ///
-    /// - SQLite file:    `sqlite:///path/to/db.sqlite3`
-    /// - SQLite memory:  `sqlite::memory:`
-    /// - PostgreSQL:     `postgres://user:pass@host:5432/db`
+    /// - file:    `sqlite:///path/to/db.sqlite3`
+    /// - memory:  `sqlite::memory:`
+    /// - postgres: `postgres://user:pass@host:5432/db`
     pub url: String,
 
     /// Maximum connections in the pool (default: 5).
@@ -34,7 +34,7 @@ impl Default for DbConfig {
 }
 
 impl DbConfig {
-    /// Create a config for a SQLite file path.
+    /// Create a config for a sqlite file path.
     #[must_use]
     pub fn sqlite(path: impl Into<String>) -> Self {
         let path = path.into();
@@ -43,7 +43,10 @@ impl DbConfig {
         } else {
             format!("sqlite://{path}?mode=rwc")
         };
-        Self { url, max_connections: 5 }
+        Self {
+            url,
+            max_connections: 5,
+        }
     }
 }
 
@@ -121,11 +124,7 @@ pub trait DbEngine: Send + Sync {
     ///
     /// # Errors
     /// Returns [`FsError`] on any SQL or transport error.
-    async fn execute(
-        &self,
-        sql: &str,
-        params: Vec<serde_json::Value>,
-    ) -> Result<DbRows, FsError>;
+    async fn execute(&self, sql: &str, params: Vec<serde_json::Value>) -> Result<DbRows, FsError>;
 
     /// Probe the connection and return health metadata.
     ///
