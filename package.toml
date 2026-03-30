@@ -1,0 +1,11 @@
+[package]
+id        = "freeSynergy.db"
+version   = "0.1.0"
+kind      = "library"
+namespace = "freeSynergy"
+name      = "FreeSynergy DB"
+summary   = "DbEngine-Trait abstraction — pure library, no container"
+
+[package.repo]
+url    = "https://github.com/FreeSynergy/fs-db"
+branch = "main"
