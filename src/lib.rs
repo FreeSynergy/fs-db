@@ -21,16 +21,22 @@ pub mod connection;
 pub mod engine;
 pub mod entities;
 pub mod entity;
+pub mod filter;
 pub mod manager;
 pub mod migration;
+pub mod record;
+pub mod repo;
 pub mod repository;
 pub mod write_buffer;
 
 pub use connection::{DbBackend, DbConnection};
 pub use engine::{DbConfig, DbEngine, DbHealth, DbRow, DbRows};
 pub use entity::{Auditable, FsEntity};
+pub use filter::{Filter, Order};
 pub use manager::DbManager;
 pub use migration::Migrator;
+pub use record::{DbRecord, DbRowExt};
+pub use repo::{EngineRepository, Repository};
 pub use repository::{
     AuditRepo, HostRepo, InstalledPackageRepo, ModuleRepo, PermissionRepo, PluginRepo, ProjectRepo,
     ResourceRepo, ServiceRegistryRepo,
