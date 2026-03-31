@@ -34,7 +34,7 @@ pub use engine::{DbConfig, DbEngine, DbHealth, DbRow, DbRows};
 pub use entity::{Auditable, FsEntity};
 pub use filter::{Filter, Order};
 pub use manager::DbManager;
-pub use migration::Migrator;
+pub use migration::{Migration, Migrator};
 pub use record::{DbRecord, DbRowExt};
 pub use repo::{EngineRepository, Repository};
 pub use repository::{

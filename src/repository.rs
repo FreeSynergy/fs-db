@@ -28,8 +28,11 @@ fn unix_now() -> i64 {
 
 /// Common CRUD operations shared by every database repository.
 ///
-/// All concrete repositories in this module implement this trait.
-/// Use it for generic code that operates across repository types.
+/// # Deprecation
+///
+/// Prefer [`crate::repo::Repository<T>`] + [`crate::record::DbRecord`] for new
+/// code.  `CrudRepo` is a legacy `SeaORM`-coupled trait that will be removed
+/// once all callers have migrated.
 ///
 /// # Example
 ///
@@ -38,6 +41,10 @@ fn unix_now() -> i64 {
 ///     repo.delete_by_id(id).await
 /// }
 /// ```
+#[deprecated(
+    since = "0.2.0",
+    note = "Use `Repository<T>` + `DbRecord` instead. CrudRepo will be removed in a future release."
+)]
 #[allow(async_fn_in_trait)]
 pub trait CrudRepo {
     /// The `SeaORM` model type this repository operates on.
@@ -267,6 +274,7 @@ impl<'a> ResourceRepo<'a> {
     }
 }
 
+#[allow(deprecated)]
 impl CrudRepo for ResourceRepo<'_> {
     type Model = resource::Model;
 
@@ -359,6 +367,7 @@ impl<'a> PermissionRepo<'a> {
     }
 }
 
+#[allow(deprecated)]
 impl CrudRepo for PermissionRepo<'_> {
     type Model = permission::Model;
 
@@ -453,6 +462,7 @@ impl<'a> AuditRepo<'a> {
     }
 }
 
+#[allow(deprecated)]
 impl CrudRepo for AuditRepo<'_> {
     type Model = audit_log::Model;
 
@@ -585,6 +595,7 @@ impl<'a> PluginRepo<'a> {
     }
 }
 
+#[allow(deprecated)]
 impl CrudRepo for PluginRepo<'_> {
     type Model = plugin::Model;
 
@@ -709,6 +720,7 @@ impl<'a> HostRepo<'a> {
     }
 }
 
+#[allow(deprecated)]
 impl CrudRepo for HostRepo<'_> {
     type Model = host::Model;
 
@@ -810,6 +822,7 @@ impl<'a> ProjectRepo<'a> {
     }
 }
 
+#[allow(deprecated)]
 impl CrudRepo for ProjectRepo<'_> {
     type Model = project::Model;
 
@@ -922,6 +935,7 @@ impl<'a> ModuleRepo<'a> {
     }
 }
 
+#[allow(deprecated)]
 impl CrudRepo for ModuleRepo<'_> {
     type Model = module::Model;
 
@@ -1044,6 +1058,7 @@ impl<'a> InstalledPackageRepo<'a> {
     }
 }
 
+#[allow(deprecated)]
 impl CrudRepo for InstalledPackageRepo<'_> {
     type Model = installed_package::Model;
 
@@ -1181,6 +1196,7 @@ impl<'a> ServiceRegistryRepo<'a> {
     }
 }
 
+#[allow(deprecated)]
 impl CrudRepo for ServiceRegistryRepo<'_> {
     type Model = service_registry::Model;
 

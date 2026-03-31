@@ -149,6 +149,7 @@ impl DbManager {
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
 #[cfg(test)]
+#[allow(deprecated)] // CrudRepo is deprecated but still tested here until fully migrated
 mod tests {
     use super::*;
     use crate::repository::{CrudRepo, HostStatus, ModuleStatus, ProjectStatus};
