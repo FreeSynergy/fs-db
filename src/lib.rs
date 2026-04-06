@@ -25,6 +25,7 @@ pub mod filter;
 pub mod manager;
 pub mod migration;
 pub mod record;
+pub mod records;
 pub mod repo;
 pub mod repository;
 pub mod write_buffer;

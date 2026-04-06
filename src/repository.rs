@@ -24,39 +24,6 @@ fn unix_now() -> i64 {
         .unwrap_or(0)
 }
 
-// ── CrudRepo trait ────────────────────────────────────────────────────────────
-
-/// Common CRUD operations shared by every database repository.
-///
-/// # Deprecation
-///
-/// Prefer [`crate::repo::Repository<T>`] + [`crate::record::DbRecord`] for new
-/// code.  `CrudRepo` is a legacy `SeaORM`-coupled trait that will be removed
-/// once all callers have migrated.
-///
-/// # Example
-///
-/// ```rust,ignore
-/// async fn remove_any<R: CrudRepo>(repo: &R, id: i64) -> Result<(), FsError> {
-///     repo.delete_by_id(id).await
-/// }
-/// ```
-#[deprecated(
-    since = "0.2.0",
-    note = "Use `Repository<T>` + `DbRecord` instead. CrudRepo will be removed in a future release."
-)]
-#[allow(async_fn_in_trait)]
-pub trait CrudRepo {
-    /// The `SeaORM` model type this repository operates on.
-    type Model: Send;
-
-    /// Find a record by its primary key. Returns `None` if not found.
-    async fn find_by_id(&self, id: i64) -> Result<Option<Self::Model>, FsError>;
-
-    /// Delete a record by its primary key.
-    async fn delete_by_id(&self, id: i64) -> Result<(), FsError>;
-}
-
 // ── Status types ──────────────────────────────────────────────────────────────
 
 /// Operational status of a managed host.
@@ -274,26 +241,6 @@ impl<'a> ResourceRepo<'a> {
     }
 }
 
-#[allow(deprecated)]
-impl CrudRepo for ResourceRepo<'_> {
-    type Model = resource::Model;
-
-    async fn find_by_id(&self, id: i64) -> Result<Option<resource::Model>, FsError> {
-        resource::Entity::find_by_id(id)
-            .one(self.conn)
-            .await
-            .map_err(|e| FsError::internal(format!("ResourceRepo::find_by_id: {e}")))
-    }
-
-    async fn delete_by_id(&self, id: i64) -> Result<(), FsError> {
-        resource::Entity::delete_by_id(id)
-            .exec(self.conn)
-            .await
-            .map(|_| ())
-            .map_err(|e| FsError::internal(format!("ResourceRepo::delete_by_id: {e}")))
-    }
-}
-
 // ── PermissionRepo ────────────────────────────────────────────────────────────
 
 /// Repository for the `permissions` table.
@@ -353,6 +300,27 @@ impl<'a> PermissionRepo<'a> {
             .map_err(|e| FsError::internal(format!("PermissionRepo::find_for_subject: {e}")))
     }
 
+    /// Find a permission by its primary key.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`FsError`] on database failure.
+    pub async fn find_by_id(&self, id: i64) -> Result<Option<permission::Model>, FsError> {
+        permission::Entity::find_by_id(id)
+            .one(self.conn)
+            .await
+            .map_err(|e| FsError::internal(format!("PermissionRepo::find_by_id: {e}")))
+    }
+
+    /// Delete a permission by its primary key.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`FsError`] on database failure.
+    pub async fn delete_by_id(&self, id: i64) -> Result<(), FsError> {
+        self.revoke(id).await
+    }
+
     /// Revoke a specific permission by its primary key.
     ///
     /// # Errors
@@ -364,22 +332,6 @@ impl<'a> PermissionRepo<'a> {
             .await
             .map(|_| ())
             .map_err(|e| FsError::internal(format!("PermissionRepo::revoke: {e}")))
-    }
-}
-
-#[allow(deprecated)]
-impl CrudRepo for PermissionRepo<'_> {
-    type Model = permission::Model;
-
-    async fn find_by_id(&self, id: i64) -> Result<Option<permission::Model>, FsError> {
-        permission::Entity::find_by_id(id)
-            .one(self.conn)
-            .await
-            .map_err(|e| FsError::internal(format!("PermissionRepo::find_by_id: {e}")))
-    }
-
-    async fn delete_by_id(&self, id: i64) -> Result<(), FsError> {
-        self.revoke(id).await
     }
 }
 
@@ -460,24 +412,28 @@ impl<'a> AuditRepo<'a> {
             .await
             .map_err(|e| FsError::internal(format!("AuditRepo::find_for_resource: {e}")))
     }
-}
 
-#[allow(deprecated)]
-impl CrudRepo for AuditRepo<'_> {
-    type Model = audit_log::Model;
-
-    async fn find_by_id(&self, id: i64) -> Result<Option<audit_log::Model>, FsError> {
+    /// Find an audit log entry by its primary key.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`FsError`] on database failure.
+    pub async fn find_by_id(&self, id: i64) -> Result<Option<audit_log::Model>, FsError> {
         audit_log::Entity::find_by_id(id)
             .one(self.conn)
             .await
             .map_err(|e| FsError::internal(format!("AuditRepo::find_by_id: {e}")))
     }
 
-    /// Audit logs are immutable — this always returns `Ok(())` without deleting.
+    /// Audit logs are immutable — always returns `Ok(())` without deleting.
     ///
     /// Audit entries must never be removed to preserve the audit trail.
     /// Use archival or retention policies at the database level instead.
-    async fn delete_by_id(&self, _id: i64) -> Result<(), FsError> {
+    ///
+    /// # Errors
+    ///
+    /// Never returns an error; signature kept for interface consistency.
+    pub fn delete_by_id(&self, _id: i64) -> Result<(), FsError> {
         Ok(())
     }
 }
@@ -593,20 +549,25 @@ impl<'a> PluginRepo<'a> {
             .map(|_| ())
             .map_err(|e| FsError::internal(format!("PluginRepo::set_enabled: {e}")))
     }
-}
 
-#[allow(deprecated)]
-impl CrudRepo for PluginRepo<'_> {
-    type Model = plugin::Model;
-
-    async fn find_by_id(&self, id: i64) -> Result<Option<plugin::Model>, FsError> {
+    /// Find a plugin by its primary key.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`FsError`] on database failure.
+    pub async fn find_by_id(&self, id: i64) -> Result<Option<plugin::Model>, FsError> {
         plugin::Entity::find_by_id(id)
             .one(self.conn)
             .await
             .map_err(|e| FsError::internal(format!("PluginRepo::find_by_id: {e}")))
     }
 
-    async fn delete_by_id(&self, id: i64) -> Result<(), FsError> {
+    /// Delete a plugin by its primary key.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`FsError`] on database failure.
+    pub async fn delete_by_id(&self, id: i64) -> Result<(), FsError> {
         plugin::Entity::delete_by_id(id)
             .exec(self.conn)
             .await
@@ -720,26 +681,6 @@ impl<'a> HostRepo<'a> {
     }
 }
 
-#[allow(deprecated)]
-impl CrudRepo for HostRepo<'_> {
-    type Model = host::Model;
-
-    async fn find_by_id(&self, id: i64) -> Result<Option<host::Model>, FsError> {
-        host::Entity::find_by_id(id)
-            .one(self.conn)
-            .await
-            .map_err(|e| FsError::internal(format!("HostRepo::find_by_id: {e}")))
-    }
-
-    async fn delete_by_id(&self, id: i64) -> Result<(), FsError> {
-        host::Entity::delete_by_id(id)
-            .exec(self.conn)
-            .await
-            .map(|_| ())
-            .map_err(|e| FsError::internal(format!("HostRepo::delete_by_id: {e}")))
-    }
-}
-
 // ── ProjectRepo ───────────────────────────────────────────────────────────────
 
 /// Repository for the `projects` table.
@@ -781,6 +722,31 @@ impl<'a> ProjectRepo<'a> {
             .map_err(|e| FsError::internal(format!("ProjectRepo::insert: {e}")))
     }
 
+    /// Find a project by its primary key.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`FsError`] on database failure.
+    pub async fn find_by_id(&self, id: i64) -> Result<Option<project::Model>, FsError> {
+        project::Entity::find_by_id(id)
+            .one(self.conn)
+            .await
+            .map_err(|e| FsError::internal(format!("ProjectRepo::find_by_id: {e}")))
+    }
+
+    /// Delete a project by its primary key.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`FsError`] on database failure.
+    pub async fn delete_by_id(&self, id: i64) -> Result<(), FsError> {
+        project::Entity::delete_by_id(id)
+            .exec(self.conn)
+            .await
+            .map(|_| ())
+            .map_err(|e| FsError::internal(format!("ProjectRepo::delete_by_id: {e}")))
+    }
+
     /// List all projects.
     ///
     /// # Errors
@@ -819,26 +785,6 @@ impl<'a> ProjectRepo<'a> {
             .update(self.conn)
             .await
             .map_err(|e| FsError::internal(format!("ProjectRepo::update: {e}")))
-    }
-}
-
-#[allow(deprecated)]
-impl CrudRepo for ProjectRepo<'_> {
-    type Model = project::Model;
-
-    async fn find_by_id(&self, id: i64) -> Result<Option<project::Model>, FsError> {
-        project::Entity::find_by_id(id)
-            .one(self.conn)
-            .await
-            .map_err(|e| FsError::internal(format!("ProjectRepo::find_by_id: {e}")))
-    }
-
-    async fn delete_by_id(&self, id: i64) -> Result<(), FsError> {
-        project::Entity::delete_by_id(id)
-            .exec(self.conn)
-            .await
-            .map(|_| ())
-            .map_err(|e| FsError::internal(format!("ProjectRepo::delete_by_id: {e}")))
     }
 }
 
@@ -915,6 +861,31 @@ impl<'a> ModuleRepo<'a> {
             .map_err(|e| FsError::internal(format!("ModuleRepo::find_by_project: {e}")))
     }
 
+    /// Find a module by its primary key.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`FsError`] on database failure.
+    pub async fn find_by_id(&self, id: i64) -> Result<Option<module::Model>, FsError> {
+        module::Entity::find_by_id(id)
+            .one(self.conn)
+            .await
+            .map_err(|e| FsError::internal(format!("ModuleRepo::find_by_id: {e}")))
+    }
+
+    /// Delete a module by its primary key.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`FsError`] on database failure.
+    pub async fn delete_by_id(&self, id: i64) -> Result<(), FsError> {
+        module::Entity::delete_by_id(id)
+            .exec(self.conn)
+            .await
+            .map(|_| ())
+            .map_err(|e| FsError::internal(format!("ModuleRepo::delete_by_id: {e}")))
+    }
+
     /// Update the operational status of a module.
     ///
     /// # Errors
@@ -932,26 +903,6 @@ impl<'a> ModuleRepo<'a> {
             .await
             .map(|_| ())
             .map_err(|e| FsError::internal(format!("ModuleRepo::update_status: {e}")))
-    }
-}
-
-#[allow(deprecated)]
-impl CrudRepo for ModuleRepo<'_> {
-    type Model = module::Model;
-
-    async fn find_by_id(&self, id: i64) -> Result<Option<module::Model>, FsError> {
-        module::Entity::find_by_id(id)
-            .one(self.conn)
-            .await
-            .map_err(|e| FsError::internal(format!("ModuleRepo::find_by_id: {e}")))
-    }
-
-    async fn delete_by_id(&self, id: i64) -> Result<(), FsError> {
-        module::Entity::delete_by_id(id)
-            .exec(self.conn)
-            .await
-            .map(|_| ())
-            .map_err(|e| FsError::internal(format!("ModuleRepo::delete_by_id: {e}")))
     }
 }
 
@@ -1056,20 +1007,25 @@ impl<'a> InstalledPackageRepo<'a> {
             .map(|_| ())
             .map_err(|e| FsError::internal(format!("InstalledPackageRepo::set_active: {e}")))
     }
-}
 
-#[allow(deprecated)]
-impl CrudRepo for InstalledPackageRepo<'_> {
-    type Model = installed_package::Model;
-
-    async fn find_by_id(&self, id: i64) -> Result<Option<installed_package::Model>, FsError> {
+    /// Find an installed package record by its primary key.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`FsError`] on database failure.
+    pub async fn find_by_id(&self, id: i64) -> Result<Option<installed_package::Model>, FsError> {
         installed_package::Entity::find_by_id(id)
             .one(self.conn)
             .await
             .map_err(|e| FsError::internal(format!("InstalledPackageRepo::find_by_id: {e}")))
     }
 
-    async fn delete_by_id(&self, id: i64) -> Result<(), FsError> {
+    /// Delete an installed package record by its primary key.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`FsError`] on database failure.
+    pub async fn delete_by_id(&self, id: i64) -> Result<(), FsError> {
         installed_package::Entity::delete_by_id(id)
             .exec(self.conn)
             .await
@@ -1176,6 +1132,31 @@ impl<'a> ServiceRegistryRepo<'a> {
             .map_err(|e| FsError::internal(format!("ServiceRegistryRepo::find_by_capability: {e}")))
     }
 
+    /// Find a service registry entry by its primary key.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`FsError`] on database failure.
+    pub async fn find_by_id(&self, id: i64) -> Result<Option<service_registry::Model>, FsError> {
+        service_registry::Entity::find_by_id(id)
+            .one(self.conn)
+            .await
+            .map_err(|e| FsError::internal(format!("ServiceRegistryRepo::find_by_id: {e}")))
+    }
+
+    /// Delete a service registry entry by its primary key.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`FsError`] on database failure.
+    pub async fn delete_by_id(&self, id: i64) -> Result<(), FsError> {
+        service_registry::Entity::delete_by_id(id)
+            .exec(self.conn)
+            .await
+            .map(|_| ())
+            .map_err(|e| FsError::internal(format!("ServiceRegistryRepo::delete_by_id: {e}")))
+    }
+
     /// Mark a registry entry as healthy or unhealthy, updating `last_check`.
     ///
     /// # Errors
@@ -1193,25 +1174,5 @@ impl<'a> ServiceRegistryRepo<'a> {
             .await
             .map(|_| ())
             .map_err(|e| FsError::internal(format!("ServiceRegistryRepo::set_healthy: {e}")))
-    }
-}
-
-#[allow(deprecated)]
-impl CrudRepo for ServiceRegistryRepo<'_> {
-    type Model = service_registry::Model;
-
-    async fn find_by_id(&self, id: i64) -> Result<Option<service_registry::Model>, FsError> {
-        service_registry::Entity::find_by_id(id)
-            .one(self.conn)
-            .await
-            .map_err(|e| FsError::internal(format!("ServiceRegistryRepo::find_by_id: {e}")))
-    }
-
-    async fn delete_by_id(&self, id: i64) -> Result<(), FsError> {
-        service_registry::Entity::delete_by_id(id)
-            .exec(self.conn)
-            .await
-            .map(|_| ())
-            .map_err(|e| FsError::internal(format!("ServiceRegistryRepo::delete_by_id: {e}")))
     }
 }

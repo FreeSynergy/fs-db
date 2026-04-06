@@ -149,10 +149,9 @@ impl DbManager {
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
 #[cfg(test)]
-#[allow(deprecated)] // CrudRepo is deprecated but still tested here until fully migrated
 mod tests {
     use super::*;
-    use crate::repository::{CrudRepo, HostStatus, ModuleStatus, ProjectStatus};
+    use crate::repository::{HostStatus, ModuleStatus, ProjectStatus};
 
     #[tokio::test]
     async fn open_memory_and_migrate() {

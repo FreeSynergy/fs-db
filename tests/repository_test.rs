@@ -3,7 +3,7 @@
 // Uses an in-memory SQLite via DbManager (no external dependency needed).
 
 use fs_db::{
-    engine::{DbConfig, DbEngine, DbHealth, DbRow, DbRows},
+    engine::{DbConfig, DbHealth, DbRow, DbRows},
     filter::{Filter, Order},
     record::{DbRecord, DbRowExt},
     repo::{EngineRepository, Repository},
