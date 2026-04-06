@@ -5,17 +5,39 @@
 use std::fmt;
 
 use sea_orm::{
-    ActiveModelTrait, ActiveValue::Set, ColumnTrait, DatabaseConnection, EntityTrait, Order,
-    QueryFilter, QueryOrder, QuerySelect,
+    ActiveModelTrait, ActiveValue::Set, ColumnTrait, DatabaseConnection, EntityTrait,
+    FromQueryResult, Order, QueryFilter, QueryOrder, QuerySelect, Statement,
 };
 
 use crate::entities::{
     audit_log, host, installed_package, module, permission, plugin, project, resource,
     service_registry,
 };
+use crate::filter::Filter;
 use fs_error::FsError;
 
 // ── helpers ───────────────────────────────────────────────────────────────────
+
+/// Convert a `serde_json::Value` to the equivalent `sea_orm::Value` for use in
+/// raw SQL statements built by [`Filter::to_sql`].
+fn json_to_sea_value(v: serde_json::Value) -> sea_orm::Value {
+    match v {
+        serde_json::Value::Null => sea_orm::Value::Bool(None),
+        serde_json::Value::Bool(b) => sea_orm::Value::Bool(Some(b)),
+        serde_json::Value::Number(n) => {
+            if let Some(i) = n.as_i64() {
+                sea_orm::Value::BigInt(Some(i))
+            } else if let Some(f) = n.as_f64() {
+                sea_orm::Value::Double(Some(f))
+            } else {
+                sea_orm::Value::BigInt(None)
+            }
+        }
+        serde_json::Value::String(s) => sea_orm::Value::String(Some(s)),
+        // Arrays / Objects are serialised as JSON strings — not expected in filters.
+        other => sea_orm::Value::String(Some(other.to_string())),
+    }
+}
 
 fn unix_now() -> i64 {
     std::time::SystemTime::now()
@@ -239,6 +261,28 @@ impl<'a> ResourceRepo<'a> {
             .await
             .map_err(|e| FsError::internal(format!("ResourceRepo::update: {e}")))
     }
+
+    /// Find resources matching `filter`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`FsError`] on database failure.
+    pub async fn find_filtered(
+        &self,
+        filter: Filter<resource::Model>,
+    ) -> Result<Vec<resource::Model>, FsError> {
+        let (fragment, params) = filter.to_sql();
+        let sql = format!("SELECT * FROM resources {fragment}");
+        let stmt = Statement::from_sql_and_values(
+            self.conn.get_database_backend(),
+            &sql,
+            params.into_iter().map(json_to_sea_value),
+        );
+        resource::Model::find_by_statement(stmt)
+            .all(self.conn)
+            .await
+            .map_err(|e| FsError::internal(format!("ResourceRepo::find_filtered: {e}")))
+    }
 }
 
 // ── PermissionRepo ────────────────────────────────────────────────────────────
@@ -332,6 +376,28 @@ impl<'a> PermissionRepo<'a> {
             .await
             .map(|_| ())
             .map_err(|e| FsError::internal(format!("PermissionRepo::revoke: {e}")))
+    }
+
+    /// Find permissions matching `filter`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`FsError`] on database failure.
+    pub async fn find_filtered(
+        &self,
+        filter: Filter<permission::Model>,
+    ) -> Result<Vec<permission::Model>, FsError> {
+        let (fragment, params) = filter.to_sql();
+        let sql = format!("SELECT * FROM permissions {fragment}");
+        let stmt = Statement::from_sql_and_values(
+            self.conn.get_database_backend(),
+            &sql,
+            params.into_iter().map(json_to_sea_value),
+        );
+        permission::Model::find_by_statement(stmt)
+            .all(self.conn)
+            .await
+            .map_err(|e| FsError::internal(format!("PermissionRepo::find_filtered: {e}")))
     }
 }
 
@@ -435,6 +501,28 @@ impl<'a> AuditRepo<'a> {
     /// Never returns an error; signature kept for interface consistency.
     pub fn delete_by_id(&self, _id: i64) -> Result<(), FsError> {
         Ok(())
+    }
+
+    /// Find audit log entries matching `filter`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`FsError`] on database failure.
+    pub async fn find_filtered(
+        &self,
+        filter: Filter<audit_log::Model>,
+    ) -> Result<Vec<audit_log::Model>, FsError> {
+        let (fragment, params) = filter.to_sql();
+        let sql = format!("SELECT * FROM audit_log {fragment}");
+        let stmt = Statement::from_sql_and_values(
+            self.conn.get_database_backend(),
+            &sql,
+            params.into_iter().map(json_to_sea_value),
+        );
+        audit_log::Model::find_by_statement(stmt)
+            .all(self.conn)
+            .await
+            .map_err(|e| FsError::internal(format!("AuditRepo::find_filtered: {e}")))
     }
 }
 
@@ -574,6 +662,28 @@ impl<'a> PluginRepo<'a> {
             .map(|_| ())
             .map_err(|e| FsError::internal(format!("PluginRepo::delete_by_id: {e}")))
     }
+
+    /// Find plugins matching `filter`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`FsError`] on database failure.
+    pub async fn find_filtered(
+        &self,
+        filter: Filter<plugin::Model>,
+    ) -> Result<Vec<plugin::Model>, FsError> {
+        let (fragment, params) = filter.to_sql();
+        let sql = format!("SELECT * FROM plugins {fragment}");
+        let stmt = Statement::from_sql_and_values(
+            self.conn.get_database_backend(),
+            &sql,
+            params.into_iter().map(json_to_sea_value),
+        );
+        plugin::Model::find_by_statement(stmt)
+            .all(self.conn)
+            .await
+            .map_err(|e| FsError::internal(format!("PluginRepo::find_filtered: {e}")))
+    }
 }
 
 // ── HostRepo ──────────────────────────────────────────────────────────────────
@@ -678,6 +788,28 @@ impl<'a> HostRepo<'a> {
             .await
             .map(|_| ())
             .map_err(|e| FsError::internal(format!("HostRepo::update_status: {e}")))
+    }
+
+    /// Find hosts matching `filter`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`FsError`] on database failure.
+    pub async fn find_filtered(
+        &self,
+        filter: Filter<host::Model>,
+    ) -> Result<Vec<host::Model>, FsError> {
+        let (fragment, params) = filter.to_sql();
+        let sql = format!("SELECT * FROM hosts {fragment}");
+        let stmt = Statement::from_sql_and_values(
+            self.conn.get_database_backend(),
+            &sql,
+            params.into_iter().map(json_to_sea_value),
+        );
+        host::Model::find_by_statement(stmt)
+            .all(self.conn)
+            .await
+            .map_err(|e| FsError::internal(format!("HostRepo::find_filtered: {e}")))
     }
 }
 
@@ -785,6 +917,28 @@ impl<'a> ProjectRepo<'a> {
             .update(self.conn)
             .await
             .map_err(|e| FsError::internal(format!("ProjectRepo::update: {e}")))
+    }
+
+    /// Find projects matching `filter`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`FsError`] on database failure.
+    pub async fn find_filtered(
+        &self,
+        filter: Filter<project::Model>,
+    ) -> Result<Vec<project::Model>, FsError> {
+        let (fragment, params) = filter.to_sql();
+        let sql = format!("SELECT * FROM projects {fragment}");
+        let stmt = Statement::from_sql_and_values(
+            self.conn.get_database_backend(),
+            &sql,
+            params.into_iter().map(json_to_sea_value),
+        );
+        project::Model::find_by_statement(stmt)
+            .all(self.conn)
+            .await
+            .map_err(|e| FsError::internal(format!("ProjectRepo::find_filtered: {e}")))
     }
 }
 
@@ -903,6 +1057,28 @@ impl<'a> ModuleRepo<'a> {
             .await
             .map(|_| ())
             .map_err(|e| FsError::internal(format!("ModuleRepo::update_status: {e}")))
+    }
+
+    /// Find modules matching `filter`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`FsError`] on database failure.
+    pub async fn find_filtered(
+        &self,
+        filter: Filter<module::Model>,
+    ) -> Result<Vec<module::Model>, FsError> {
+        let (fragment, params) = filter.to_sql();
+        let sql = format!("SELECT * FROM modules {fragment}");
+        let stmt = Statement::from_sql_and_values(
+            self.conn.get_database_backend(),
+            &sql,
+            params.into_iter().map(json_to_sea_value),
+        );
+        module::Model::find_by_statement(stmt)
+            .all(self.conn)
+            .await
+            .map_err(|e| FsError::internal(format!("ModuleRepo::find_filtered: {e}")))
     }
 }
 
@@ -1031,6 +1207,28 @@ impl<'a> InstalledPackageRepo<'a> {
             .await
             .map(|_| ())
             .map_err(|e| FsError::internal(format!("InstalledPackageRepo::delete_by_id: {e}")))
+    }
+
+    /// Find installed packages matching `filter`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`FsError`] on database failure.
+    pub async fn find_filtered(
+        &self,
+        filter: Filter<installed_package::Model>,
+    ) -> Result<Vec<installed_package::Model>, FsError> {
+        let (fragment, params) = filter.to_sql();
+        let sql = format!("SELECT * FROM installed_packages {fragment}");
+        let stmt = Statement::from_sql_and_values(
+            self.conn.get_database_backend(),
+            &sql,
+            params.into_iter().map(json_to_sea_value),
+        );
+        installed_package::Model::find_by_statement(stmt)
+            .all(self.conn)
+            .await
+            .map_err(|e| FsError::internal(format!("InstalledPackageRepo::find_filtered: {e}")))
     }
 }
 
@@ -1174,5 +1372,27 @@ impl<'a> ServiceRegistryRepo<'a> {
             .await
             .map(|_| ())
             .map_err(|e| FsError::internal(format!("ServiceRegistryRepo::set_healthy: {e}")))
+    }
+
+    /// Find service registry entries matching `filter`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`FsError`] on database failure.
+    pub async fn find_filtered(
+        &self,
+        filter: Filter<service_registry::Model>,
+    ) -> Result<Vec<service_registry::Model>, FsError> {
+        let (fragment, params) = filter.to_sql();
+        let sql = format!("SELECT * FROM service_registry {fragment}");
+        let stmt = Statement::from_sql_and_values(
+            self.conn.get_database_backend(),
+            &sql,
+            params.into_iter().map(json_to_sea_value),
+        );
+        service_registry::Model::find_by_statement(stmt)
+            .all(self.conn)
+            .await
+            .map_err(|e| FsError::internal(format!("ServiceRegistryRepo::find_filtered: {e}")))
     }
 }
